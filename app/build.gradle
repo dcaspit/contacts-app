@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
+    id 'com.google.dagger.hilt.android'
+    id 'kotlin-kapt'
 }
 
 android {
@@ -27,11 +29,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
     }
     buildFeatures {
         viewBinding true
@@ -41,15 +43,19 @@ android {
         kotlinCompilerExtensionVersion '1.5.1'
     }
     packaging {
-        resources {
-            excludes += '/META-INF/{AL2.0,LGPL2.1}'
-        }
+        resources.excludes.add("META-INF/AL2.0")
+        resources.excludes.add("META-INF/LGPL2.1")
+        resources.excludes.add("META-INF/LICENSE.md")
+        resources.excludes.add("META-INF/LICENSE-notice.md")
+        resources.excludes.add("/META-INF/gradle/incremental.annotation.processors")
+
     }
 }
 
 dependencies {
     implementation(project(":feature:home"))
     implementation(project(":core:common"))
+    implementation(project(":core:ui"))
     implementation libs.androidx.core.ktx
     implementation libs.androidx.lifecycle.runtime.ktx
 
@@ -57,12 +63,19 @@ dependencies {
     implementation(libs.androidx.splash.screen)
     implementation(libs.androidx.fragment.ktx)
     implementation(libs.bundles.androidx.navigation)
-    implementation(libs.hilt)
+    implementation "com.google.dagger:hilt-android:2.51.1"
+    kapt "com.google.dagger:hilt-compiler:2.51.1"
     implementation(libs.coroutines)
     implementation(libs.timber)
     implementation(libs.kotlinx.serialization.json)
 
+
     testImplementation libs.junit
     androidTestImplementation libs.androidx.junit
     androidTestImplementation libs.androidx.espresso.core
+}
+
+// Allow references to generated code
+kapt {
+    correctErrorTypes true
 }

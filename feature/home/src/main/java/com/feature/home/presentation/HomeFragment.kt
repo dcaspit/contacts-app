@@ -2,45 +2,47 @@ package com.feature.home.presentation
 
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.os.Parcelable
-import android.provider.ContactsContract
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
+import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
+import androidx.navigation.ui.AppBarConfiguration
+import androidx.navigation.ui.setupWithNavController
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.common.extensions.collectLatestLifecycleFlow
+import com.common.state.DataState
+import com.common.util.theme.ThemeUtils
+import com.feature.home.R
+import com.feature.home.business.model.Contact
 import com.feature.home.databinding.FragmentHomeBinding
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-import kotlin.concurrent.thread
+import com.feature.home.presentation.adapters.ContactListAdapter
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+import com.ui.R as uiR
 
 private const val CONTACTS_PERMISSION_REQUEST = 1
 
 private const val CONTACTS_PERMISSION = "android.permission.READ_CONTACTS"
 
+@AndroidEntryPoint
 class HomeFragment: Fragment() {
 
     private var _binding: FragmentHomeBinding? = null
 
     private val binding get() = _binding!!
 
-    val adapter = ContactListAdapter(object : ContactListAdapter.OnClickListener {
-        override fun onClickContact(contact: Contact) {
-
-        }
-
-        override fun onClickImage(contact: Contact) {
-
-        }
-    })
+    val viewModel: HomeViewModel by viewModels()
+//
+//    @Inject
+//    lateinit var themeUtils: ThemeUtils
+//
+    @Inject
+    lateinit var adapter: ContactListAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -48,22 +50,35 @@ class HomeFragment: Fragment() {
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
-
-
-
-        binding.contactList.adapter = adapter
-
         return binding.root
     }
 
+
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        requestContactsPermissionOrStartLoadingList()
-        contactList.observe(viewLifecycleOwner) { list ->
-            Log.d("Daniel", "$list")
-            binding.contactList.addItemDecoration(DividerItemDecoration(binding.root.context, LinearLayoutManager.VERTICAL))
-            adapter.submitList(list)
+
+        initToolbar()
+        initRecyclerView()
+
+        collectLatestLifecycleFlow(viewModel.contactList) { state ->
+            when(state) {
+                is DataState.Error<*> -> {
+
+                }
+                DataState.Idle -> {}
+                DataState.Loading -> {}
+                is DataState.Success -> {
+
+                    adapter.submitList(state.data)
+                    adapter.notifyDataSetChanged()
+                    binding.swipeRefreshLayout.isRefreshing = false
+                }
+            }
+
         }
+
+        requestContactsPermissionOrStartLoadingList()
     }
 
     override fun onDestroyView() {
@@ -71,65 +86,48 @@ class HomeFragment: Fragment() {
         _binding = null
     }
 
-    private val _contactList = MutableLiveData<List<Contact>>()
-    /**
-     * A list of contacts that can be shown on the screen.
-     * Views should use this to get access to the data.
-     */
-    val contactList: LiveData<List<Contact>>
-        get() = _contactList
-
-    suspend fun getContacts() {
-        withContext(Dispatchers.IO) {
-
-            val projection = arrayOf(
-                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY,
-                ContactsContract.CommonDataKinds.Phone.NUMBER,
-                ContactsContract.CommonDataKinds.Phone.PHOTO_URI,
-                ContactsContract.CommonDataKinds.Phone.NORMALIZED_NUMBER,
-                ContactsContract.CommonDataKinds.Phone.CONTACT_ID
-            )
-
-            val contacts = mutableListOf<Contact>()
-
-            val cursor = requireContext().contentResolver.query(
-                ContactsContract.CommonDataKinds.Phone.CONTENT_URI, projection, null, null,
-                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY + " ASC"
-            )
-
-            if ((cursor?.count ?: 0) > 0) {
-
-                val normalizedNumbersAlreadyFound = hashSetOf<String>()
-                val indexOfNormalizedNumber =
-                    cursor?.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NORMALIZED_NUMBER)
-                val indexOfDisplayName = cursor?.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY)
-                val indexOfDisplayNumber = cursor?.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
-                val indexOfPhotoUri = cursor?.getColumnIndex(ContactsContract.CommonDataKinds.Phone.PHOTO_URI)
-                val indexOfContactID = cursor?.getColumnIndex(ContactsContract.CommonDataKinds.Phone.CONTACT_ID)
-
-                while (cursor!!.moveToNext()) {
-                    val normalizedNumber = cursor.getString(indexOfNormalizedNumber!!)
-                    if (normalizedNumbersAlreadyFound.add(normalizedNumber)) {
-                        val name = cursor.getString(indexOfDisplayName!!)
-                        val phoneNumber =
-                            cursor.getString(indexOfDisplayNumber!!)
-                        val photoUri =
-                            cursor.getString(indexOfPhotoUri!!)
-                        val id =
-                            cursor.getString(indexOfContactID!!)
-
-                        Log.d("contact", "getAllContacts: $name $phoneNumber $photoUri")
-                        val contact = Contact(id, name, phoneNumber, photoUri)
-
-                        contacts.add(contact)
-                    }
-                }
-            }
-            cursor?.close()
-
-            _contactList.postValue(contacts)
-        }
+    private fun openContactDetail(contact: Contact) {
+        // TODO: Implement Contact Details Screen
     }
+
+    private fun initRecyclerView() {
+        adapter.onItemClicked = ::openContactDetail
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            viewModel.getContacts()
+        }
+        binding.contactList.addItemDecoration(DividerItemDecoration(binding.root.context, LinearLayoutManager.VERTICAL))
+        binding.contactList.adapter = adapter
+    }
+
+
+
+    private fun initToolbar() {
+        val navController = findNavController()
+        val appBarConfiguration = AppBarConfiguration(
+            setOf(R.id.homeFragment)
+        )
+
+//        with(binding.fragmentTrendingToolbar) {
+////            inflateMenu(uiR.menu.toolbar_main_menu)
+////            title = "Home"
+////            setupWithNavController(navController, appBarConfiguration)
+////            setOnMenuItemClickListener {
+////                if (it.itemId == uiR.id.item_toolbar_toggle_theme) {
+////                    toggleTheme()
+////                    return@setOnMenuItemClickListener true
+////                }
+////                false
+////            }
+//            setOnClickListener {
+//                binding.contactList.smoothScrollToPosition(0)
+//            }
+//        }
+    }
+
+    private fun toggleTheme() {
+//        themeUtils.toggleTheme(requireContext())
+    }
+
 
     private fun requestContactsPermissionOrStartLoadingList() {
         if (ContextCompat.checkSelfPermission(
@@ -140,9 +138,8 @@ class HomeFragment: Fragment() {
             requestContactSPermission()
             return
         }
-        runBlocking {
-            getContacts()
-        }
+
+        viewModel.getContacts()
     }
 
     /**
@@ -157,9 +154,7 @@ class HomeFragment: Fragment() {
         when (requestCode) {
             CONTACTS_PERMISSION_REQUEST -> {
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    runBlocking {
-                        getContacts()
-                    }
+                    viewModel.getContacts()
                 } else {
                     Toast.makeText(
                         activity, "bla bla",
@@ -171,10 +166,3 @@ class HomeFragment: Fragment() {
         }
     }
 }
-
-data class Contact(
-    val id: String,
-    val name: String,
-    val number: String,
-    val imageUri: String?
-)
