@@ -12,7 +12,7 @@ android {
     defaultConfig {
         applicationId "com.contactsapp"
         minSdk 24
-        targetSdk 35
+        targetSdk 34
         versionCode 1
         versionName "1.0"
 
@@ -54,6 +54,7 @@ android {
 
 dependencies {
     implementation(project(":feature:home"))
+    implementation(project(":feature:search"))
     implementation(project(":core:common"))
     implementation(project(":core:ui"))
     implementation libs.androidx.core.ktx

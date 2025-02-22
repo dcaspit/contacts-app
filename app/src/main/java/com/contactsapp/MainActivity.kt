@@ -2,12 +2,8 @@ package com.contactsapp
 
 import android.os.Bundle
 import android.view.View
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.fragment.NavHostFragment
-import androidx.navigation.fragment.findNavController
-import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.NavigationUI
 import androidx.navigation.ui.setupWithNavController
 import com.contactsapp.databinding.ActivityMainBinding
 import dagger.hilt.android.AndroidEntryPoint
@@ -24,6 +20,7 @@ class MainActivity :  AppCompatActivity(){
 
     private val fragmentIdsWithBottomNavigation = listOf(
         com.feature.home.R.id.homeFragment,
+        com.search.R.id.searchFragment,
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,13 +37,13 @@ class MainActivity :  AppCompatActivity(){
     private fun setupBottomNavigationBar() {
         navController.addOnDestinationChangedListener { _, destination, _ ->
             if (destination.id in fragmentIdsWithBottomNavigation) {
-//                binding.mainBottomNavigation.visibility = View.VISIBLE
+                binding.mainBottomNavigation.visibility = View.VISIBLE
                 supportActionBar?.run {
                     setDisplayHomeAsUpEnabled(false)
                     setDisplayShowHomeEnabled(false)
                 }
             } else {
-//                binding.mainBottomNavigation.visibility = View.GONE
+                binding.mainBottomNavigation.visibility = View.GONE
                 supportActionBar?.run {
                     setDisplayHomeAsUpEnabled(true)
                     setDisplayShowHomeEnabled(true)

@@ -1,13 +1,8 @@
 package com.feature.home.presentation
 
 import android.content.pm.PackageManager
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
 import android.widget.Toast
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.AppBarConfiguration
@@ -18,9 +13,9 @@ import com.common.extensions.collectLatestLifecycleFlow
 import com.common.state.DataState
 import com.common.util.theme.ThemeUtils
 import com.feature.home.R
-import com.feature.home.business.model.Contact
 import com.feature.home.databinding.FragmentHomeBinding
-import com.feature.home.presentation.adapters.ContactListAdapter
+import com.ui.presentation.adapters.ContactListAdapter
+import com.ui.base.BaseFragment
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import com.ui.R as uiR
@@ -30,13 +25,10 @@ private const val CONTACTS_PERMISSION_REQUEST = 1
 private const val CONTACTS_PERMISSION = "android.permission.READ_CONTACTS"
 
 @AndroidEntryPoint
-class HomeFragment: Fragment() {
-
-    private var _binding: FragmentHomeBinding? = null
-
-    private val binding get() = _binding!!
-
-    val viewModel: HomeViewModel by viewModels()
+class HomeFragment: BaseFragment<FragmentHomeBinding>(
+    inflate = FragmentHomeBinding::inflate
+) {
+    override val viewModel: HomeViewModel by viewModels()
 
     @Inject
     lateinit var themeUtils: ThemeUtils
@@ -44,60 +36,12 @@ class HomeFragment: Fragment() {
     @Inject
     lateinit var adapter: ContactListAdapter
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        _binding = FragmentHomeBinding.inflate(inflater, container, false)
-        return binding.root
-    }
-
-
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-
+    override fun initUi() {
         initToolbar()
         initRecyclerView()
-
-        viewModel.contactList.observe(viewLifecycleOwner) { state ->
-            when(state) {
-                is DataState.Error<*> -> {
-
-                }
-                DataState.Idle -> {}
-                DataState.Loading -> {}
-                is DataState.Success -> {
-                    adapter.submitList(state.data)
-                    binding.swipeRefreshLayout.isRefreshing = false
-                }
-            }
-
-        }
-
+        subscribeContacts()
         requestContactsPermissionOrStartLoadingList()
     }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
-    }
-
-    private fun openContactDetail(contact: Contact) {
-        // TODO: Implement Contact Details Screen
-    }
-
-    private fun initRecyclerView() {
-        adapter.onItemClicked = ::openContactDetail
-        binding.swipeRefreshLayout.setOnRefreshListener {
-            viewModel.getContacts()
-        }
-        binding.contactList.addItemDecoration(DividerItemDecoration(binding.root.context, LinearLayoutManager.VERTICAL))
-        binding.contactList.adapter = adapter
-    }
-
-
 
     private fun initToolbar() {
         val navController = findNavController()
@@ -126,6 +70,31 @@ class HomeFragment: Fragment() {
         themeUtils.toggleTheme(requireContext())
     }
 
+    private fun initRecyclerView() {
+        adapter.onItemClicked = ::openContactDetail
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            viewModel.refreshContacts()
+        }
+        binding.contactList.addItemDecoration(DividerItemDecoration(binding.root.context, LinearLayoutManager.VERTICAL))
+        binding.contactList.adapter = adapter
+    }
+
+    private fun openContactDetail(contact: com.business.model.Contact) {
+        // TODO: Implement Contact Details Screen
+    }
+
+    private fun subscribeContacts() {
+        collectLatestLifecycleFlow(viewModel.contactList) { state ->
+            when (state) {
+                DataState.Idle -> {}
+                is DataState.Success -> {
+                    adapter.submitList(state.data)
+                    binding.swipeRefreshLayout.isRefreshing = false
+                }
+            }
+
+        }
+    }
 
     private fun requestContactsPermissionOrStartLoadingList() {
         if (ContextCompat.checkSelfPermission(
@@ -136,13 +105,9 @@ class HomeFragment: Fragment() {
             requestContactSPermission()
             return
         }
-
-        viewModel.getContacts()
+        viewModel.loadContacts()
     }
 
-    /**
-     * Show the user a dialog asking for permission to show contacts.
-     */
     private fun requestContactSPermission() {
         requestPermissions(arrayOf(CONTACTS_PERMISSION), CONTACTS_PERMISSION_REQUEST)
     }
@@ -152,7 +117,7 @@ class HomeFragment: Fragment() {
         when (requestCode) {
             CONTACTS_PERMISSION_REQUEST -> {
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    viewModel.getContacts()
+                    viewModel.loadContacts()
                 } else {
                     Toast.makeText(
                         activity, "bla bla",

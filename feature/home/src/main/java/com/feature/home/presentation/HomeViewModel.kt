@@ -1,12 +1,10 @@
 package com.feature.home.presentation
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.common.base.BaseViewModel
 import com.common.state.DataState
-import com.feature.home.business.model.Contact
-import com.feature.home.business.usecase.GetContactsUseCase
+import com.business.model.Contact
+import com.business.usecase.LoadContactsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,19 +15,24 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val getContactsUseCase: GetContactsUseCase,
+    private val loadContactsUseCase: LoadContactsUseCase,
 ): BaseViewModel(){
 
-    private val _contactList = MutableLiveData<DataState<List<Contact>>>(DataState.Idle)
+    private val _contactList = MutableStateFlow<DataState<List<Contact>>>(DataState.Idle)
+    val contactList = _contactList.asStateFlow()
 
-    val contactList: LiveData<DataState<List<Contact>>>
-        get() = _contactList
-
-    fun getContacts() {
-        viewModelScope.launch(Dispatchers.IO) {
-            getContactsUseCase().collect {
-                _contactList.postValue(it)
+    fun loadContacts() {
+        if(_contactList.value is DataState.Idle) {
+            viewModelScope.launch(Dispatchers.IO) {
+                loadContactsUseCase().collectLatest { data ->
+                    _contactList.value = data
+                }
             }
         }
+    }
+
+    fun refreshContacts() {
+        _contactList.value = DataState.Idle
+        loadContacts()
     }
 }

@@ -43,8 +43,8 @@ android {
 }
 
 dependencies {
-
     implementation project(":core:common")
+    implementation project(":core:business")
     implementation project(":core:ui")
 
     implementation "com.github.bumptech.glide:glide:4.14.2"
