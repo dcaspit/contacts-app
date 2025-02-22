@@ -37,10 +37,10 @@ class HomeFragment: Fragment() {
     private val binding get() = _binding!!
 
     val viewModel: HomeViewModel by viewModels()
-//
-//    @Inject
-//    lateinit var themeUtils: ThemeUtils
-//
+
+    @Inject
+    lateinit var themeUtils: ThemeUtils
+
     @Inject
     lateinit var adapter: ContactListAdapter
 
@@ -61,7 +61,7 @@ class HomeFragment: Fragment() {
         initToolbar()
         initRecyclerView()
 
-        collectLatestLifecycleFlow(viewModel.contactList) { state ->
+        viewModel.contactList.observe(viewLifecycleOwner) { state ->
             when(state) {
                 is DataState.Error<*> -> {
 
@@ -69,9 +69,7 @@ class HomeFragment: Fragment() {
                 DataState.Idle -> {}
                 DataState.Loading -> {}
                 is DataState.Success -> {
-
                     adapter.submitList(state.data)
-                    adapter.notifyDataSetChanged()
                     binding.swipeRefreshLayout.isRefreshing = false
                 }
             }
@@ -107,25 +105,25 @@ class HomeFragment: Fragment() {
             setOf(R.id.homeFragment)
         )
 
-//        with(binding.fragmentTrendingToolbar) {
-////            inflateMenu(uiR.menu.toolbar_main_menu)
-////            title = "Home"
-////            setupWithNavController(navController, appBarConfiguration)
-////            setOnMenuItemClickListener {
-////                if (it.itemId == uiR.id.item_toolbar_toggle_theme) {
-////                    toggleTheme()
-////                    return@setOnMenuItemClickListener true
-////                }
-////                false
-////            }
-//            setOnClickListener {
-//                binding.contactList.smoothScrollToPosition(0)
-//            }
-//        }
+        with(binding.toolbar) {
+            inflateMenu(uiR.menu.toolbar_main_menu)
+            title = "Home"
+            setupWithNavController(navController, appBarConfiguration)
+            setOnMenuItemClickListener {
+                if (it.itemId == uiR.id.item_toolbar_toggle_theme) {
+                    toggleTheme()
+                    return@setOnMenuItemClickListener true
+                }
+                false
+            }
+            setOnClickListener {
+                binding.contactList.smoothScrollToPosition(0)
+            }
+        }
     }
 
     private fun toggleTheme() {
-//        themeUtils.toggleTheme(requireContext())
+        themeUtils.toggleTheme(requireContext())
     }
 
 

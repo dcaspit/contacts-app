@@ -20,13 +20,15 @@ class HomeViewModel @Inject constructor(
     private val getContactsUseCase: GetContactsUseCase,
 ): BaseViewModel(){
 
-    private val _contactList = MutableStateFlow<DataState<List<Contact>>>(DataState.Idle)
-    val contactList = _contactList.asStateFlow()
+    private val _contactList = MutableLiveData<DataState<List<Contact>>>(DataState.Idle)
+
+    val contactList: LiveData<DataState<List<Contact>>>
+        get() = _contactList
 
     fun getContacts() {
         viewModelScope.launch(Dispatchers.IO) {
-            getContactsUseCase().collectLatest {
-                _contactList.value = it
+            getContactsUseCase().collect {
+                _contactList.postValue(it)
             }
         }
     }

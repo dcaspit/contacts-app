@@ -40,13 +40,13 @@ class MainActivity :  AppCompatActivity(){
     private fun setupBottomNavigationBar() {
         navController.addOnDestinationChangedListener { _, destination, _ ->
             if (destination.id in fragmentIdsWithBottomNavigation) {
-                binding.mainBottomNavigation.visibility = View.VISIBLE
+//                binding.mainBottomNavigation.visibility = View.VISIBLE
                 supportActionBar?.run {
                     setDisplayHomeAsUpEnabled(false)
                     setDisplayShowHomeEnabled(false)
                 }
             } else {
-                binding.mainBottomNavigation.visibility = View.GONE
+//                binding.mainBottomNavigation.visibility = View.GONE
                 supportActionBar?.run {
                     setDisplayHomeAsUpEnabled(true)
                     setDisplayShowHomeEnabled(true)
