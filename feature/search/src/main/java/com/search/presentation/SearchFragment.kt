@@ -1,6 +1,8 @@
 package com.search.presentation
 
+import android.content.pm.PackageManager
 import android.widget.SearchView
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.AppBarConfiguration
@@ -16,6 +18,10 @@ import com.ui.base.BaseFragment
 import com.ui.presentation.adapters.ContactListAdapter
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+
+private const val CONTACTS_PERMISSION_REQUEST = 1
+
+private const val CONTACTS_PERMISSION = "android.permission.READ_CONTACTS"
 
 @AndroidEntryPoint
 class SearchFragment: BaseFragment<FragmentSearchBinding>(
@@ -34,6 +40,18 @@ class SearchFragment: BaseFragment<FragmentSearchBinding>(
         initRecyclerView()
         initSearchView()
         subscribeContacts()
+        checkPermissions()
+    }
+
+    private fun checkPermissions() {
+        if (ContextCompat.checkSelfPermission(
+                requireContext(),
+                CONTACTS_PERMISSION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        viewModel.loadContacts()
     }
 
     private fun initSearchView() {

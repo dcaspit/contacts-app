@@ -22,11 +22,7 @@ class SearchViewModel @Inject constructor(
     private val _contactList = MutableStateFlow<DataState<List<Contact>>>(DataState.Idle)
     val contactList = _contactList.asStateFlow()
 
-    init {
-        loadContacts()
-    }
-
-    private fun loadContacts() {
+    fun loadContacts() {
         viewModelScope.launch(Dispatchers.IO) {
             loadContactsUseCase().collectLatest { data ->
                 if (data is DataState.Success) {
@@ -40,7 +36,7 @@ class SearchViewModel @Inject constructor(
         viewModelScope.launch {
             val tempContacts = mutableListOf<Contact>()
             for (contact in _cachedList) {
-                if (contact.name.contains(query)) {
+                if (contact.name.lowercase().contains(query.lowercase())) {
                     tempContacts.add(contact)
                 }
             }

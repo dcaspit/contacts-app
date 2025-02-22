@@ -1,7 +1,12 @@
 package com.feature.home.presentation
 
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
+import android.view.View
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -40,7 +45,23 @@ class HomeFragment: BaseFragment<FragmentHomeBinding>(
         initToolbar()
         initRecyclerView()
         subscribeContacts()
+        initPermissionsButton()
         requestContactsPermissionOrStartLoadingList()
+    }
+
+    private fun initPermissionsButton() {
+        binding.noPermissionsButton.setOnClickListener {
+            with(alertDialog) {
+                setTitle("Permission Required")
+                setMessage("This feature requires camera access. Please enable it in app settings.")
+                setPositiveButton("Go to Settings") { _ ->
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                    intent.data = Uri.parse("package:" + context.packageName)
+                    context.startActivity(intent)
+                }
+                show()
+            }
+        }
     }
 
     private fun initToolbar() {
@@ -50,6 +71,7 @@ class HomeFragment: BaseFragment<FragmentHomeBinding>(
         )
 
         with(binding.toolbar) {
+            navigationIcon = null
             inflateMenu(uiR.menu.toolbar_main_menu)
             title = "Home"
             setupWithNavController(navController, appBarConfiguration)
@@ -92,7 +114,6 @@ class HomeFragment: BaseFragment<FragmentHomeBinding>(
                     binding.swipeRefreshLayout.isRefreshing = false
                 }
             }
-
         }
     }
 
@@ -119,11 +140,8 @@ class HomeFragment: BaseFragment<FragmentHomeBinding>(
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     viewModel.loadContacts()
                 } else {
-                    Toast.makeText(
-                        activity, "bla bla",
-                        Toast.LENGTH_LONG
-                    )
-                        .show()
+                    binding.swipeRefreshLayout.visibility = View.GONE
+                    binding.noPermissionsContainer.visibility = View.VISIBLE
                 }
             }
         }
